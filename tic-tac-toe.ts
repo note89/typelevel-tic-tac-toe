@@ -1,71 +1,29 @@
-/*
-########################
-####  Requirements  ####
-########################
+// ########################
+// ####  Requirements  ####
+// ########################
+// 
+// Design an API for a Tic-Tac-Toe board, consisting of types
+// representing states of the board, along with functions 
+// move, takeMoveBack, whoWonOrDraw, and isPositionOccupied.
+// 
+// * All functions must be pure
+// * All functions must return a sensible value and may not throw exceptions
+// * A move can only be made if
+//   - the game is not over
+//   - the player is the current player
+//   - the move is valid (i.e. not already played)
+// * Calling TakeMoveBack on a board with no moves is a compile time error
+// * Calling WhoWonOrDraw on a tic-tac-toe board but the game has not finished is a compile time error
+// * IsPositionOccupied works for in-play and completed games.
 
-Design an API for a Tic-Tac-Toe board, consisting of types
-representing states of the board, along with functions 
-move, takeMoveBack, whoWonOrDraw, and isPositionOccupied.
-
-* All functions must be pure
-* All function must return a sensible value and may not throw exceptions
-* A move can only be made if
-  - the game is not over
-  - the player is the current player
-  - the move is valid (i.e. not already played)
-* Calling TakeMoveBack on a board with no moves is a compile time error
-* Calling WhoWonOrDraw on a tic-tac-toe board but the game has not finished is a compile time error
-* IsPositionOccupied works for in-play and completed games.
-
-*/
-
-
-/*/
-################
-####  Utils ####
-################
-
-    We need some type-level utility functions to help us with the game.
-    Equal and Expect functions have been taken from the excellent type-challenges repo.
-    https://github.com/type-challenges/type-challenges/blob/master/utils/index.d.ts
-*/
-
-
-/*
- Equal<X,Y> 
- Check if two types are equal.
-
- ------------------------------------------------------------
- For full discussion around this type, see:
- https://github.com/Microsoft/TypeScript/issues/27024#issuecomment-421529650
-
-> ...It relies on conditional types being deferred when T is not known. 
-> Assignability of deferred conditional types relies on an internal isTypeIdenticalTo check, 
-> which is only true for two conditional types if:
-> 
->   * Both conditional types have the same constraint
->   * The true and false branches of both conditions are the same type
-- https://github.com/Microsoft/TypeScript/issues/27024#issuecomment-510924206
-
---------------------------------------------------------------
-*/
-
-type Equal<X, Y> = 
-  (<T>() => T extends X ? 1 : 2) extends 
-  (<T>() => T extends Y ? 1 : 2) ? true : false;
-
-// Expect<T>
-// Give type-level error if T is not true
-type Expect<T extends true> = T;
-
-
-
+// #################
+// ####  Utils  ####
+// #################
+//
 // CartesianProduct<X,Y>
 // Example: 
 // CartesianProduct<"a" | "b", "c" | "d"> = ["a,c", "a,d", "b,c", "b,d"]
 type CartesianProductString<T extends ToStringableTypes,T2 extends ToStringableTypes > = `${T}${T2}`;
-type CartesianProductString2<T extends Array<ToStringableTypes>,T2 extends Array<ToStringableTypes>> = `${T[number]}${T2[number]}`;
-//type CartesianProductString<T extends ToStringableTypes,T2 extends ToStringableTypes > = `${T},${T2}`;
 type ToStringableTypes = string | number | boolean | bigint;
 
 // UnionToIntersection<X>
@@ -73,39 +31,60 @@ type ToStringableTypes = string | number | boolean | bigint;
 type UnionToIntersection<U> = 
   (U extends any ? (k: U)=>void : never) extends ((k: infer I)=>void) ? I : never
 
-
-// Defined between 1 and 1000
-type MinusOne<T extends number, arr extends any[] = []> = [
-  ...arr,
-  ''
-]['length'] extends T
-  ? arr['length']
-  : MinusOne<T, [...arr, '']>
-
-// Defined between 1 and 1000
-type PlusOne<T extends number, arr extends any[] = []> = 
-  [...arr, '']['length'] extends T
-    ? [...arr, '', '']['length']
-    : PlusOne<T, [...arr, '']>
-
-type FromToInc<From extends number, To extends number, acc extends any[] = []> = From extends PlusOne<To> ? acc : FromToInc<PlusOne<From>, To, [...acc, From]>;
-type FromToDec<From extends number, To extends number, acc extends any[] = []> = From extends MinusOne<To> ? acc : FromToDec<MinusOne<From>, To, [...acc, From]>;
-type Repeat<T extends any, N extends number, start extends number = 1, acc extends any[] = []> = start extends PlusOne<N> ? acc : Repeat<T, N, PlusOne<start>, [...acc, T]>;
+// Example: ToUnion<[1,2,3]> = 1 | 2 | 3
 type ToUnion<T extends any[]> = T[number]
+
+// Zip two arrays together
+// Example: Zip<[1,2,3],["a","b","c"]> = [[1,"a"],[2,"b"],[3,"c"]]
 type Zip<T extends any[], U extends any[], Acc extends any[] = []> = 
   T extends [infer Head, ...infer Tail] ? 
   U extends [infer Head2, ...infer Tail2] ? 
   Zip<Tail, Tail2, [...Acc, [Head, Head2]]> : Acc  : Acc;
 
-type Concat<T extends [number, number][]> = {[Key in keyof T]: `${T[Key][0]}${T[Key][1]}`};
 
-/********/
+// Join tuples together to strings
+// Example: StringConcatTuples<[[1,2],[3,4]]> = ["12","34"]
+type StringConcatTuples<T extends [number, number][]> = {[Key in keyof T]: `${T[Key][0]}${T[Key][1]}`};
 
-/*
-#####################
-####  Data Types ####
-#####################
-*/
+// ####  Math Utils  ####
+
+// MinusOne<N>
+// Defined between 1 and 1000
+// Take a number N
+// Check if length of empty array + one unknown element is equal to N
+// If it is return length of array which is one less then N.
+// If not recursively call MinusOne with an array that is one element longer.
+type MinusOne<N extends number, Arr extends any[] = []> = [
+  ...Arr,
+  unknown
+]['length'] extends N
+  ? Arr['length']
+  : MinusOne<N, [...Arr, unknown]>
+
+// PlusOne<N>
+// Defined between 1 and 1000
+// Same idea as above but when we hit our base case
+// Add two extra elements to the array and return the length of the array.
+// This way we get N + 1
+type PlusOne<N extends number, Arr extends any[] = []> = 
+  [...Arr, unknown]['length'] extends N
+    ? [...Arr, unknown, unknown]['length']
+    : PlusOne<N, [...Arr, unknown]>
+
+// FromToInc<Lower,Higher>
+// Gives back an Array of all numbers between Lower and Higher (inclusive)
+// Example: FromToInc<1,3> = [1,2,3]
+type FromToInc<From extends number, To extends number, acc extends any[] = []> = From extends PlusOne<To> ? acc : FromToInc<PlusOne<From>, To, [...acc, From]>;
+
+// FromToDec<Higher,Lower>
+// Gives back an Array of all numbers between Higher and Lower (inclusive)
+// Example: FromToDec<3,1> = [3,2,1]
+type FromToDec<From extends number, To extends number, acc extends any[] = []> = From extends MinusOne<To> ? acc : FromToDec<MinusOne<From>, To, [...acc, From]>;
+
+
+// #####################
+// ####  Data Types ####
+// #####################
 
 interface Circle { __type: "O";     }
 interface Cross  { __type: "X";     }
@@ -117,13 +96,16 @@ type Square = Player | Empty;
 
 
 // ##############################################
+// ##############################################
 // #### SELECT THE SIZE OF THE GAME YOU WANT ####
+// ##############################################
 // ##############################################
 type Size = 3
 // ##############################################
-// In a Future version of the game, types will 
+// ##############################################
+// In a future version of the game, types will 
 // be parameterized by the size of the game.
-// So multiple Games of different sizes can 
+// So multiple games of different sizes can 
 // exist at the same time.
 // 
 // However even now everything is calculated from the Size
@@ -136,10 +118,9 @@ type Size = 3
 // Column and Row can potentially be different sizes
 // Though winning on the diagonal will have to change 
 // If the game is not square.
-type Column    = ToUnion<FromToInc<1,Size>>;
-type Row       = ToUnion<FromToInc<1,Size>>;
-type Position = CartesianProductString<Column, Row>
-
+type Column      = ToUnion<FromToInc<1,Size>>;
+type Row         = ToUnion<FromToInc<1,Size>>;
+type Coordinates = CartesianProductString<Column, Row>
 
 
 // ###################################
@@ -170,7 +151,7 @@ type GetRowPositions<C extends Column, R extends Row> = R extends Row ? [Cartesi
 type GetColumnPositions<C extends Column, R extends Row> = C extends Column ? [CartesianProductString<C, R>] : never;
 
 type Diagonals<Size extends number> =  Zip<FromToInc<1, Size>, FromToInc<1,Size>> | Zip<FromToInc<1, Size>, FromToDec<Size, 1>>
-type GetDiagonalPositions<S extends Size> = Concat<Diagonals<S>>
+type GetDiagonalPositions<S extends Size> = StringConcatTuples<Diagonals<S>>
 
 // WinningPositions
 // Example
@@ -190,10 +171,10 @@ type WinningPositions =
 // ###################################
 //
 // Fundamental data type of the game.
-// Each Position has a Square.
+// Board contains a mapping from Coordinate to Square
 // A Square is either Empty, Cross, or Circle.
 //
-type Squares = { [s in Position]: Square };
+type Board = { [s in Coordinates]: Square };
 
 // ###################################
 // ####        Get Winner         ####
@@ -201,8 +182,8 @@ type Squares = { [s in Position]: Square };
 // 
 // LookupPosition returns the state of the squares at each position listed
 // ["11", "12", "13"] -> [Circle, Circle, Circle]
-type LookupPositions<Positions extends Array<Position>, S extends Squares> =
-  { [Key in keyof Positions ]: S[Positions[Key]] }
+type LookupCoordinates<Coords extends Array<Coordinates>, S extends Board> =
+  { [Key in keyof Coords ]: S[Coords[Key]] }
 
 // If there is any Array that only contains the same element
 // Then that element(s) will be returned
@@ -210,8 +191,8 @@ type UniqueInSequence<P extends Array<unknown>> =
   P extends Array<unknown> ? UnionToIntersection<P[number]> : never
 
 // If there is a winner in the Squares provided then the winner is returned.
-type GetWinnerOrNever<S extends Squares> =
-   UniqueInSequence<LookupPositions<WinningPositions,S>>
+type GetWinnerOrNever<S extends Board> =
+   UniqueInSequence<LookupCoordinates<WinningPositions,S>>
 
 
 // ###################################
@@ -221,7 +202,7 @@ type GetWinnerOrNever<S extends Squares> =
 // A Round has a bunch of Squares and a Player that is next to move.
 // It also has a previous Round or Nil, to be able to allow for undoing moves.
 interface Round<
-  S extends Squares,
+  S extends Board,
   P extends Player,
   B extends Round<any, any, any> | Nil
 > extends HasPrevious<B> {
@@ -237,11 +218,11 @@ interface HasPrevious<P> {
 // ####    Initial game states    ####
 // ###################################
 //
-type InitialSquares = { [key in keyof Squares]: Empty };
-type InitialRound = Round<InitialSquares, Cross, Nil>;
+type InitialBoard = { [key in keyof Board]: Empty };
+type InitialRound = Round<InitialBoard, Cross, Nil>;
 
 // Squares that are possible to play on
-type AvailableSquares<B extends Squares> = {
+type AvailableSquares<B extends Board> = {
   [key in keyof B]: B[key] extends Empty ? key : never;
 }[keyof B];
 
@@ -254,7 +235,7 @@ type AvailableSquares<B extends Squares> = {
 interface Winner<
   S extends Player,
   PrevR extends Round<any, any, any>,
-  Curr extends Squares
+  Curr extends Board
 > extends HasPrevious<PrevR> {
   __tag: "winner",
   winningPosition: Curr;
@@ -284,7 +265,7 @@ interface Draw<R extends Round<any, any, any>> extends HasPrevious<R> {__tag: "d
 // This does however open the door for the user to provide a value that might 
 // Circumvent the checks done so duplication it is.
 type Move<
-  CurrentRound extends Round<Squares, P, any>,
+  CurrentRound extends Round<Board, P, any>,
   P extends Player,
   Position extends AvailableSquares<CurrentRound["squares"]>
 > = HasWon<
@@ -307,12 +288,12 @@ type Move<
 type GetNextPlayer<P extends Player> = P extends Cross ? Circle : Cross;
 
 // Sets a Square to a Player
-type SetSquare<Sqs extends Squares, PositionToSet, Player> = {
+type SetSquare<Sqs extends Board, PositionToSet, Player> = {
   [Pos in keyof Sqs]: Pos extends PositionToSet ? Player : Sqs[Pos];
 };
 
 // Checks if there is no more squares to play on.
-type NoMoreSquares<S extends Squares> = AvailableSquares<S> extends never
+type NoMoreSquares<S extends Board> = AvailableSquares<S> extends never
   ? true
   : false;
 
@@ -348,7 +329,7 @@ type TakeMoveBack<B extends HasPrevious<Round<any, any, any>>> = B["previous"];
 // has by definition no squares to play on.
 type IsPositionOccupied<
   RW extends Winner<any, any, any> | Round<any, any, any>,
-  Pos extends Position
+  Pos extends Coordinates
 > = (
   RW extends Winner<any, any, any>
     ? RW["winningPosition"][Pos]
@@ -370,6 +351,39 @@ type IsPositionOccupied<
 // Typescript gives us this handy comment we can use to check for type errors.
 // \@ts-expect-error 
 // This allows us to get errors if we don't get type errors.
+
+// ######################
+// ####  Test Utils  ####
+// ######################
+// 
+// We need some type-level utility functions to help us with the game.
+// Equal and Expect functions have been taken from the excellent type-challenges repo.
+// https://github.com/type-challenges/type-challenges/blob/master/utils/index.d.ts
+// 
+
+//  Equal<X,Y> 
+//  Check if two types are equal.
+//  ------------------------------------------------------------
+//  For full discussion around this type, see:
+//  https://github.com/Microsoft/TypeScript/issues/27024#issuecomment-421529650
+// 
+// > ...It relies on conditional types being deferred when T is not known. 
+// > Assignability of deferred conditional types relies on an internal isTypeIdenticalTo check, 
+// > which is only true for two conditional types if:
+// > 
+// >   * Both conditional types have the same constraint
+// >   * The true and false branches of both conditions are the same type
+// > - https://github.com/Microsoft/TypeScript/issues/27024#issuecomment-510924206
+// 
+
+type Equal<X, Y> = 
+  (<T>() => T extends X ? 1 : 2) extends 
+  (<T>() => T extends Y ? 1 : 2) ? true : false;
+
+// Expect<T>
+// Give type-level error if T is not true
+type Expect<T extends true> = T;
+
 
 type CircleWonString = ReturnType<WhoWonOrDraw<WinCircleFinal>>;
 type CrossWonString  = ReturnType<WhoWonOrDraw<WinCrossFinal>>;
