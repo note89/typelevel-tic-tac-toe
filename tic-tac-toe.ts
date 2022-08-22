@@ -3,6 +3,10 @@
 ####  Requirements  ####
 ########################
 
+Design an API for a Tic-Tac-Toe board, consisting of types
+representing states of the board, along with functions 
+move, takeMoveBack, whoWonOrDraw, and isPositionOccupied.
+
 * All functions must be pure
 * All function must return a sensible value and may not throw exceptions
 * A move can only be made if
@@ -11,6 +15,8 @@
   - the move is valid (i.e. not already played)
 * Calling TakeMoveBack on a board with no moves is a compile time error
 * Calling WhoWonOrDraw on a tic-tac-toe board but the game has not finished is a compile time error
+* IsPositionOccupied works for in-play and completed games.
+
 */
 
 
@@ -19,7 +25,7 @@
 ####  Utils ####
 ################
 
-    We need some typelevel utility functions to help us with the game.
+    We need some type-level utility functions to help us with the game.
     Equal and Expect functions have been taken from the excellent type-challenges repo.
     https://github.com/type-challenges/type-challenges/blob/master/utils/index.d.ts
 */
@@ -147,7 +153,7 @@ type Position = CartesianProductString<Column, Row>
 // ["11", "22","33"] 
 // 2. Check what is the state of all of them
 // [Circle, Cross, Empty]
-// 3. Create a intersection of all the states
+// 3. Create an intersection of all the states
 // Circle & Cross & Empty
 // never
 // Only time we get a value is when all three are the same
@@ -155,7 +161,7 @@ type Position = CartesianProductString<Column, Row>
 // Circle & Circle & Circle
 // Circle
 //
-// Now we can check if a player is the winner.
+// Now we can check if the player is the winner.
 //
 // ###################################
 // #### Winning Positions Helpers ####
@@ -170,7 +176,7 @@ type GetDiagonalPositions<S extends Size> = Concat<Diagonals<S>>
 // Example
 // [["1,1", "2,2", "3,3"], ["1,3", "2,2", "3,1"] ... ]
 // Used to check if a player has won, by using Positions 
-// to lookup current state of the squares.
+// to look up the current state of the squares.
 type WinningPositions =
   // Rows
   | GetRowPositions<Column, Row>
@@ -273,7 +279,7 @@ interface Draw<R extends Round<any, any, any>> extends HasPrevious<R> {__tag: "d
 // If not we return the next Round.
 //
 // There is some duplication of the next round
-// This could be solved with more type type parameters of the form
+// This could be solved with more type parameters of the form
 // <..., Name = DefaultValue>
 // This does however open the door for the user to provide a value that might 
 // Circumvent the checks done so duplication it is.
@@ -337,7 +343,7 @@ type TakeMoveBack<B extends HasPrevious<Round<any, any, any>>> = B["previous"];
 //  
 // We check if there if the Square is Empty in the Position provided. 
 // Depending on the game state we look at different fields. 
-// We return a boolean to indicate if the square if occupied or not.
+// We return a boolean to indicate if the square is occupied or not.
 // We don't allow the function to be called with Draw, because a Draw game
 // has by definition no squares to play on.
 type IsPositionOccupied<
@@ -359,9 +365,9 @@ type IsPositionOccupied<
 // ####         TEST Cases        ####
 // ###################################
 //
-// Note, since these are type level tests 
-// we want to check for type error while we want the program to compile
-// Typescript gives use this handy comment we can use to check for type errors.
+// Note, since these are type-level tests 
+// we want to check for type errors while we want the program to compile
+// Typescript gives us this handy comment we can use to check for type errors.
 // \@ts-expect-error 
 // This allows us to get errors if we don't get type errors.
 
@@ -372,7 +378,7 @@ type DrawString      = ReturnType<WhoWonOrDraw<DrawFinal>>;
 // ##################################
 // #              TEST              #
 // ##################################
-// # No double moves by same player #
+// #         No double moves        #
 // ##################################
 // @ts-expect-error
 type NoDoubleMove = Move<Move<InitialRound, Cross, "33">, Cross, "13" >;
@@ -398,7 +404,7 @@ type NoTakingAUsedSquare = Move<Move<InitialRound, Cross, "33">,Circle, "33">
 // #              TEST              #
 // ##################################
 // #  InitialRound has no previous  #
-// #  Don't allow to take to many   #
+// #  Don't allow to take too many  #
 // #           moves back           #
 // ##################################
 // @ts-expect-error
