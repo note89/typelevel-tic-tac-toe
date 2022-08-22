@@ -128,7 +128,7 @@ type Coordinates = CartesianProductString<Column, Row>
 // ###################################
 // The way we are going to see if a player has won yet
 // is by using the fact that we know what combination of
-// positions are winning if a player has all of them.
+// positions are winning, if a player has all of them they have won.
 // Steps:
 // 1. Create a list of all the winning positions
 // ["11", "22","33"] 
@@ -147,10 +147,24 @@ type Coordinates = CartesianProductString<Column, Row>
 // ###################################
 // #### Winning Positions Helpers ####
 // ###################################
-type GetRowPositions<C extends Column, R extends Row> = R extends Row ? [CartesianProductString<C, R>] : never;
-type GetColumnPositions<C extends Column, R extends Row> = C extends Column ? [CartesianProductString<C, R>] : never;
+type GetRowPositions<C extends Column, R extends Row> = 
+    R extends Row 
+      ? [CartesianProductString<C, R>] 
+      : never;
 
-type Diagonals<Size extends number> =  Zip<FromToInc<1, Size>, FromToInc<1,Size>> | Zip<FromToInc<1, Size>, FromToDec<Size, 1>>
+type GetColumnPositions<C extends Column, R extends Row> = 
+    C extends Column 
+      ? [CartesianProductString<C, R>] 
+      : never;
+
+
+type Diagonals<Size extends number, 
+               FromToSize extends number[] = FromToInc<1,Size>, 
+               SizeToFrom extends number[] = FromToDec<Size, 1>, 
+               > =  
+  | Zip<FromToSize, FromToSize> 
+  | Zip<FromToSize, SizeToFrom>
+
 type GetDiagonalPositions<S extends Size> = StringConcatTuples<Diagonals<S>>
 
 // WinningPositions
