@@ -1,3 +1,112 @@
+//
+// To play along
+// here is a Typescript playground of the code.
+// https://tinyurl.com/typelevel-tic-tac-toe
+//
+// ##################################
+// ##################################
+// #          Play a Game           #
+// #              of                #
+// #          Tic-Tac-Toe           #
+// ##################################
+// ##################################
+// 
+// This is my attempt of a decent UX (hehe).
+// 0. Select game board size (3x3, 4x4, 5x5, etc) 
+// 1. Cross will be the first to move
+// 2. Just enter coordinates.
+// 
+// The status checks below will turn RED 
+// To show what state the game is in.
+//
+// Illegal moves will be compile-time errors
+// with decent error messages.
+//
+type GameSize = 3;
+type GameStatus =  CrashOrPass<SetError<
+  GameLoop<[
+
+  //  Ongoing game
+  // "11"
+
+  //  Play a taken position
+  //  "11", "11"
+
+  //  Malformed move
+  //  "11", "Hello"
+
+  //  Play moves after game is won
+  //  "11", "32", "22", "12", "33" "13"
+
+  //  Cross Win
+  //  "11", "32", "22", "12", "33" 
+
+  //  Circle Win
+  //  "13", "11", "23", "22", "12", "33"
+
+  // Draw 
+  // "13", "23", "33", "12", "22", "11", "32", "31", "21"
+  ]
+>>>
+// ################################
+// ###### GAME YET TO START #######
+// ################################
+// @ts-expect-error
+type C5 = GameYetToStart<GameStatus>
+
+// ################################
+// ######  GAME IS ONGOING  #######
+// ################################
+// @ts-expect-error
+type C0 = GameIsOngoing<GameStatus>
+
+// ################################
+// ######    GAME A DRAW    #######
+// ################################
+//@ts-expect-error
+type C1 = TheGameIsADraw<GameStatus>
+
+// ################################
+// ####  GAME A WIN FOR CROSS  ####
+// ################################
+//@ts-expect-error
+type C2 = CrossHasWon<GameStatus>
+
+// ################################
+// ####  GAME A WIN FOR CIRCLE ####
+// ################################
+//@ts-expect-error
+type C3 = CircleHasWon<GameStatus>
+
+
+// ################################
+// ####       UI Helpers       ####
+// ################################
+type TheGameIsADraw<T extends Draw<any>> = T
+type CrossHasWon<T extends Winner<Cross, any, any>>= T
+type CircleHasWon<T extends Winner<Circle, any, any>> = T
+type GameIsOngoing<T extends Round<any, any, Round<any,any,any>>> = T
+type GameYetToStart<T extends InitialRound> = T
+
+type GameLoop<A extends Array<Coordinates>, 
+              R extends Round<any,any,any> = InitialRound, 
+              P extends Player = Cross> = 
+ A extends [infer Head, ...infer Tail] ?
+   Tail extends Array<Coordinates> ?
+   Head extends AvailableSquares<R["board"]> ?
+     Move<R,P,Head> extends Round<any,any,any> ?
+       GameLoop<Tail, Move<R,P,Head>, GetNextPlayer<P>> : 
+       Tail extends [] ? Move<R,P,Head> 
+         : `${ERROR_ID} No more moves allowed, game is over`
+         : `${ERROR_ID} Square '${Head extends string ? Head : never}' already taken` 
+         : `${ERROR_ID} Tail of Coordinate array is malformatted`
+         : R
+
+type ERROR_ID = "__ERROR__:"
+
+type SetError<T> = [T, T extends `${ERROR_ID}${string}` ? "error" : "noError"]
+type CrashOrPass<T extends [unknown, "noError"]> = T[0];
+
 // ########################
 // ####  Requirements  ####
 // ########################
@@ -96,13 +205,9 @@ type Square = Player | Empty;
 
 
 // ##############################################
+type Size = GameSize;
 // ##############################################
-// #### SELECT THE SIZE OF THE GAME YOU WANT ####
-// ##############################################
-// ##############################################
-type Size = 3
-// ##############################################
-// ##############################################
+// (Size was here before i made the UI at the top therefore the redeclaration)
 // In a future version of the game, types will 
 // be parameterized by the size of the game.
 // So multiple games of different sizes can 
@@ -131,22 +236,22 @@ type Coordinates = CartesianProductString<Column, Row>
 // positions are winning, if a player has all of them they have won.
 // Steps:
 //
-// 1. Create a list of all the winning positions
-//    ["11", "22","33"] 
+// 1. Create a union of all the winning positions
+//    ["11", "12", "13"] | ["21", "22", "23"] | ... 
 //
-// 2. Check what is the state of all of them
-//    [Circle, Cross, Empty]
+// 2. Check what the current state of all of them are
+//    [Circle, Cross, Empty] | [Circle, Circle, Circle] ... 
 //
-// 3. Create an intersection of all the states
-//    Circle & Cross & Empty
-//    never
+// 3. Create an intersection those states, and remove the array/tuple
+//    [Circle & Cross & Empty] | [Circle & Circle & Circle] | ... 
+//    [never] | [Circle]
+//    never | Circle
+//    Circle
 //
 // Only time we get a value is when all three are the same
-//   [Circle, Circle, Circle]
-//   Circle & Circle & Circle
-//   Circle
 //
-// Now we can check if the player is the winner.
+// Now we can check if the player is the winner, 
+// by checking if the intersection contains a player.
 //
 // ###################################
 // #### Winning Positions Helpers ####
@@ -174,9 +279,8 @@ type GetDiagonalPositions<S extends Size> = StringConcatTuples<Diagonals<S>>
 
 // WinningPositions
 // Example
-// [["1,1", "2,2", "3,3"], ["1,3", "2,2", "3,1"] ... ]
-// Used to check if a player has won, by using Positions 
-// to look up the current state of the squares.
+// ["11", "12", "13"] | ["21", "22", "23"] | ...
+// All the winning positions for a Tic-Tac-Toe game.
 type WinningPositions =
   // Rows
   | GetRowPositions<Column, Row>
@@ -186,7 +290,7 @@ type WinningPositions =
   | GetDiagonalPositions<Size>
 
 // ###################################
-// ####          Squares          ####
+// ####           Board           ####
 // ###################################
 //
 // Fundamental data type of the game.
@@ -201,65 +305,67 @@ type Board = { [s in Coordinates]: Square };
 // 
 // LookupPosition returns the state of the squares at each position listed
 // ["11", "12", "13"] -> [Circle, Circle, Circle]
-type LookupCoordinates<Coords extends Array<Coordinates>, S extends Board> =
-  { [Key in keyof Coords ]: S[Coords[Key]] }
+type LookupCoordinates<Coords extends Array<Coordinates>, B extends Board> =
+  { [Key in keyof Coords ]: B[Coords[Key]] }
 
-// If there is any Array that only contains the same element
-// Then that element(s) will be returned
+// If there is any Array that contains only the same element
+// then that element will be returned
 type UniqueInSequence<P extends Array<unknown>> =
   P extends Array<unknown> ? UnionToIntersection<P[number]> : never
 
 // If there is a winner in the Squares provided then the winner is returned.
-type GetWinnerOrNever<S extends Board> =
-   UniqueInSequence<LookupCoordinates<WinningPositions,S>>
+type GetWinner<B extends Board> =
+   UniqueInSequence<LookupCoordinates<WinningPositions,B>>
+
 
 
 // ###################################
-// ####           Board           ####
+// ####           Round           ####
 // ###################################
 // 
 // A Round has a bunch of Squares and a Player that is next to move.
 // It also has a previous Round or Nil, to be able to allow for undoing moves.
 interface Round<
-  S extends Board,
+  B extends Board,
   P extends Player,
-  B extends Round<any, any, any> | Nil
-> extends HasPrevious<B> {
+  R extends Round<any, any, any> | Nil
+> extends HasPrevious<R> {
   __tag: "round";
-  squares: S;
+  board: B;
   nextToMove: P;
 }
 
-interface HasPrevious<P> {
-  previous: P;
+// We separate our HasPrevious interface from the Round interface
+// To be able to use it in other interfaces.
+// And have type level functions where the only constraint is that
+// it has the HasPrevious interface.
+interface HasPrevious<R> {
+  previous: R;
 }
 
 // ###################################
-// ####    Initial game states    ####
+// ####   Initial board & round   ####
 // ###################################
 //
 type InitialBoard = { [key in keyof Board]: Empty };
 type InitialRound = Round<InitialBoard, Cross, Nil>;
 
-// Squares that are possible to play on
-type AvailableSquares<B extends Board> = {
-  [key in keyof B]: B[key] extends Empty ? key : never;
-}[keyof B];
-
-
-
 // ###################################
 // ####        Game States        ####
 // ###################################
-//
+// The game can be in one of three states:
+// 1. Round in progress
+// 2. Won
+// 3. Draw
+
 interface Winner<
-  S extends Player,
+  P extends Player,
   PrevR extends Round<any, any, any>,
   Curr extends Board
 > extends HasPrevious<PrevR> {
   __tag: "winner",
   winningPosition: Curr;
-  winner: S;
+  winner: P;
 }
 
 interface Draw<R extends Round<any, any, any>> extends HasPrevious<R> {__tag: "draw";}
@@ -279,41 +385,42 @@ interface Draw<R extends Round<any, any, any>> extends HasPrevious<R> {__tag: "d
 // If it is we return a Draw.
 // If not we return the next Round.
 //
-// There is some duplication of the next round
-// This could be solved with more type parameters of the form
-// <..., Name = DefaultValue>
-// This does however open the door for the user to provide a value that might 
-// Circumvent the checks done so duplication it is.
+// Last argument is not allowed to be passed in, but is used 
+// to reduce duplication in the function body.
 type Move<
   CurrentRound extends Round<Board, P, any>,
   P extends Player,
-  Position extends AvailableSquares<CurrentRound["squares"]>
-> = HasWon<
-  P,
-  Round<SetSquare<CurrentRound["squares"], Position, P>, GetNextPlayer<P>, CurrentRound>
-> extends true
-  ? Winner<P, CurrentRound, SetSquare<CurrentRound["squares"], Position, P>>
-  : NoMoreSquares<SetSquare<CurrentRound["squares"], Position, P>> extends true
+  Position extends AvailableSquares<CurrentRound["board"]>,
+  _NextBoard extends Board = SetSquare<CurrentRound["board"], Position, P>
+> = 
+HasWon<P,Round<_NextBoard, GetNextPlayer<P>, CurrentRound>> extends true 
+  ? Winner<P, CurrentRound, _NextBoard>
+  : NoMoreSquares<_NextBoard> extends true
     ? Draw<CurrentRound>
     : Round<
-        SetSquare<CurrentRound["squares"], Position, P>,
+        _NextBoard,
         GetNextPlayer<P>,
         CurrentRound
       >;
 
-// ##########################
-// ######  Move Utils  ######
-// ##########################
-//
+// ###########################################
+// ####        Game State Functions       ####
+// ###########################################
+
+// Squares that are possible to play on
+type AvailableSquares<B extends Board> = {
+  [Coordinate in keyof B]: B[Coordinate] extends Empty ? Coordinate : never;
+}[keyof B];
+
 type GetNextPlayer<P extends Player> = P extends Cross ? Circle : Cross;
 
 // Sets a Square to a Player
-type SetSquare<Sqs extends Board, PositionToSet, Player> = {
-  [Pos in keyof Sqs]: Pos extends PositionToSet ? Player : Sqs[Pos];
+type SetSquare<B extends Board, PositionToSet, Player> = {
+  [Pos in keyof B]: Pos extends PositionToSet ? Player : B[Pos];
 };
 
 // Checks if there is no more squares to play on.
-type NoMoreSquares<S extends Board> = AvailableSquares<S> extends never
+type NoMoreSquares<B extends Board> = AvailableSquares<B> extends never
   ? true
   : false;
 
@@ -321,23 +428,26 @@ type NoMoreSquares<S extends Board> = AvailableSquares<S> extends never
 type HasWon<
   P extends Player,
   B extends Round<any, any, any>
-> = P extends GetWinnerOrNever<B["squares"]> ? true : false;
+> = P extends GetWinner<B["board"]> ? true : false;
 
- 
-// ###########################################
-// ####        Game State Functions       ####
-// ###########################################
 
+// ###########################################
+// ####        Extra Functions from       ####
+// ####             Requirements          ####
+// ###########################################
+type DrawString = "The game was a draw";
 type WhoWonOrDraw<A extends Draw<any> | Winner<Player, any, any>> = (
   state: A
 ) => A extends Winner<infer P, any, any>
   ? PlayerWinnerString<P>
-  : "The game was a draw";
+  : DrawString;
 
 // Util
+type CircleWonString = "Circle Won the game"
+type CrossWonString = "Cross Won the game"
 type PlayerWinnerString<P extends Player> = P extends Circle
-  ? "Circle Won the game"
-  : "Cross Won the game";
+  ? CircleWonString
+  : CrossWonString
 
 type TakeMoveBack<B extends HasPrevious<Round<any, any, any>>> = B["previous"];
 
@@ -347,14 +457,16 @@ type TakeMoveBack<B extends HasPrevious<Round<any, any, any>>> = B["previous"];
 // We return a boolean to indicate if the square is occupied or not.
 // We don't allow the function to be called with Draw, because a Draw game
 // has by definition no squares to play on.
+// Which is a bit stronger then the official requirement, and we could 
+// just return true if the game is Draw.
 type IsPositionOccupied<
   RW extends Winner<any, any, any> | Round<any, any, any>,
-  Pos extends Coordinates
+  Coord extends Coordinates
 > = (
   RW extends Winner<any, any, any>
-    ? RW["winningPosition"][Pos]
+    ? RW["winningPosition"][Coord]
     : RW extends Round<any, any, any>
-    ? RW["squares"][Pos]
+    ? RW["board"][Coord]
     : never
 ) extends Empty
   ? false
@@ -404,10 +516,14 @@ type Equal<X, Y> =
 // Give type-level error if T is not true
 type Expect<T extends true> = T;
 
-
-type CircleWonString = ReturnType<WhoWonOrDraw<WinCircleFinal>>;
-type CrossWonString  = ReturnType<WhoWonOrDraw<WinCrossFinal>>;
-type DrawString      = ReturnType<WhoWonOrDraw<DrawFinal>>;
+// ##################################
+// #              TEST              #
+// ##################################
+// #         Correct strings        #
+// ##################################
+type CircleWonStringTest = Expect<Equal<ReturnType<WhoWonOrDraw<WinCircleFinal>>,  CircleWonString>>;
+type CrossWonStringTest  = Expect<Equal<ReturnType<WhoWonOrDraw<WinCrossFinal>>,   CrossWonString>>;
+type DrawStringTest      = Expect<Equal<ReturnType<WhoWonOrDraw<DrawFinal>>,       DrawString>>;
 
 // ##################################
 // #              TEST              #
@@ -521,122 +637,8 @@ type WinCircleOutcome = Expect<Equal<
 // ##################################
 // ##################################
 // ##################################
-// #           Play a Game          #
-// ##################################
-// ##################################
-// ##################################
-// 
-// This is my attempt to a decent UX (hehe).
-// 1. Cross will be the first to move
-// 2. Just enter coordinates.
-// 
-// The status checks below will turn RED 
-// To show what state the game is in.
-//
-// Illegal moves will be compile time errors
-// with decent error messages.
-//
-type GameStatus =  CrashOrPass<SetError<
-  GameLoop<[
-
-  //  Ongoing game
-  // "11"
-
-  //  Play a taken position
-  //  "11", "11"
-
-  //  Malformed move
-  //  "11", "Hello"
-
-  //  Play moves after game is won
-  //  "11", "32", "22", "12", "33" "13"
-
-  //  Cross Win
-  //  "11", "32", "22", "12", "33" 
-
-  //  Circle Win
-  //  "13", "11", "23", "22", "12", "33"
-
-  // Draw 
-  // "13", "23", "33", "12", "22", "11", "32", "31", "21"
-  ]
->>>
-// ################################
-// ###### GAME YET TO START #######
-// ################################
-// @ts-expect-error
-type C5 = GameYetToStart<GameStatus>
-
-// ################################
-// ######  GAME IS ONGOING  #######
-// ################################
-// @ts-expect-error
-type C0 = GameIsOngoing<GameStatus>
-
-// ################################
-// ######    GAME A DRAW    #######
-// ################################
-//@ts-expect-error
-type C1 = TheGameIsADraw<GameStatus>
-
-// ################################
-// ####  GAME A WIN FOR CROSS  ####
-// ################################
-//@ts-expect-error
-type C2 = CrossHasWon<GameStatus>
-
-// ################################
-// ####  GAME A WIN FOR CIRCLE ####
-// ################################
-//@ts-expect-error
-type C3 = CircleHasWon<GameStatus>
-
-
-type TheGameIsADraw<T extends Draw<any>> = T
-type CrossHasWon<T extends Winner<Cross, any, any>>= T
-type CircleHasWon<T extends Winner<Circle, any, any>> = T
-type GameIsOngoing<T extends Round<any, any, Round<any,any,any>>> = T
-type GameYetToStart<T extends InitialRound> = T
-
-type GameLoop<A extends Array<Coordinates>, R extends Round<any,any,any> = InitialRound, P extends Player = Cross> = 
- A extends [infer Head, ...infer Tail] ?
-  Tail extends Array<Coordinates> ?
-  Head extends AvailableSquares<R["squares"]> ?
-    Move<R,P,Head> extends Round<any,any,any> ?
-      GameLoop<Tail, Move<R,P,Head>, GetNextPlayer<P>> : 
-      Tail extends [] ? Move<R,P,Head> : "__ERROR__: No more moves allowed, game is over" 
-                                       : `__ERROR__: Square '${Head extends string ? Head : never}' already taken` 
-                                       : "__ERROR__: Tail of Coordinate array is malformatted" 
-                                       : R
-
-type SetError<T> = [T, T extends `__ERROR__: ${string}` ? true : false]
-type CrashOrPass<T extends [unknown, false]> = T[0];
-
-
-
-// ##################################
-// ##################################
-// ##################################
 // #         End of program         #
 // #       Thanks for reading       #
 // ##################################
 // ##################################
 // ##################################
-
-//type Move<
-//  CurrentRound extends Round<Board, P, any>,
-//  P extends Player,
-//  Position extends AvailableSquares<CurrentRound["squares"]>
-//> = HasWon<
-//  P,
-//  Round<SetSquare<CurrentRound["squares"], Position, P>, GetNextPlayer<P>, CurrentRound>
-//> extends true
-//  ? Winner<P, CurrentRound, SetSquare<CurrentRound["squares"], Position, P>>
-//  : NoMoreSquares<SetSquare<CurrentRound["squares"], Position, P>> extends true
-//    ? Draw<CurrentRound>
-//    : Round<
-//        SetSquare<CurrentRound["squares"], Position, P>,
-//        GetNextPlayer<P>,
-//        CurrentRound
-//      >;
-//
