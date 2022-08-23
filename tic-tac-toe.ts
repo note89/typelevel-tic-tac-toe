@@ -530,38 +530,73 @@ type WinCircleOutcome = Expect<Equal<
 // 1. Cross will be the first to move
 // 2. Just enter coordinates.
 // 
-// The status checks below will turn RED when 
-// one of the players win or it's a draw
+// The status checks below will turn RED 
+// To show what state the game is in.
 //
-// Illegal moves will be compile time errors.
+// Illegal moves will be compile time errors
+// with decent error messages.
 //
 type GameStatus =  CrashOrPass<SetError<
   GameLoop<[
-   // Cross Win
-   "11", "32", "22", "12", 
+
+  //  Ongoing game
+  // "11"
+
+  //  Play a taken position
+  //  "11", "11"
+
+  //  Malformed move
+  //  "11", "Hello"
+
+  //  Play moves after game is won
+  //  "11", "32", "22", "12", "33" "13"
+
+  //  Cross Win
+  //  "11", "32", "22", "12", "33" 
+
+  //  Circle Win
+  //  "13", "11", "23", "22", "12", "33"
 
   // Draw 
   // "13", "23", "33", "12", "22", "11", "32", "31", "21"
   ]
 >>>
+// ################################
+// ###### GAME YET TO START #######
+// ################################
+// @ts-expect-error
+type C5 = GameYetToStart<GameStatus>
 
-//@ts-expect-error
-type C0 = GameIsOnGoing<GameStatus>
+// ################################
+// ######  GAME IS ONGOING  #######
+// ################################
+// @ts-expect-error
+type C0 = GameIsOngoing<GameStatus>
 
+// ################################
+// ######    GAME A DRAW    #######
+// ################################
 //@ts-expect-error
 type C1 = TheGameIsADraw<GameStatus>
 
+// ################################
+// ####  GAME A WIN FOR CROSS  ####
+// ################################
 //@ts-expect-error
 type C2 = CrossHasWon<GameStatus>
 
+// ################################
+// ####  GAME A WIN FOR CIRCLE ####
+// ################################
 //@ts-expect-error
-type C3 = CirlceHasWon<GameStatus>
+type C3 = CircleHasWon<GameStatus>
 
 
 type TheGameIsADraw<T extends Draw<any>> = T
 type CrossHasWon<T extends Winner<Cross, any, any>>= T
 type CircleHasWon<T extends Winner<Circle, any, any>> = T
-type GameIsOnGoing<T extends Round<any, any, any>> = T
+type GameIsOngoing<T extends Round<any, any, Round<any,any,any>>> = T
+type GameYetToStart<T extends InitialRound> = T
 
 type GameLoop<A extends Array<Coordinates>, R extends Round<any,any,any> = InitialRound, P extends Player = Cross> = 
  A extends [infer Head, ...infer Tail] ?
@@ -569,8 +604,8 @@ type GameLoop<A extends Array<Coordinates>, R extends Round<any,any,any> = Initi
   Head extends AvailableSquares<R["squares"]> ?
     Move<R,P,Head> extends Round<any,any,any> ?
       GameLoop<Tail, Move<R,P,Head>, GetNextPlayer<P>> : 
-      Tail extends [] ? Move<R,P,Head> : "__ERROR__: No more moves allowed" 
-                                       : `__ERROR__: Square "${Head extends string ? Head : never}" already taken` 
+      Tail extends [] ? Move<R,P,Head> : "__ERROR__: No more moves allowed, game is over" 
+                                       : `__ERROR__: Square '${Head extends string ? Head : never}' already taken` 
                                        : "__ERROR__: Tail of Coordinate array is malformatted" 
                                        : R
 
