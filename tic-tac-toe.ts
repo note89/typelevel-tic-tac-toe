@@ -7,7 +7,12 @@
 // ##################################
 // #          Play a Game           #
 // #              of                #
+// #--------------------------------#
+// #           Typelevel            #
 // #          Tic-Tac-Toe           #
+// #--------------------------------#
+// #              UI                #
+// #          STARTS HERE           #
 // ##################################
 // ##################################
 // 
@@ -23,11 +28,16 @@
 // with decent error messages.
 //
 type GameSize = 3;
+
+//   ##############################
+type ____________DISPLAY___________ = d
+//   ##############################
+
 type GameStatus =  CrashOrPass<SetError<
   GameLoop<[
 
   //  Ongoing game
-  // "11"
+  // "11", "22", "33",
 
   //  Play a taken position
   //  "11", "11"
@@ -48,68 +58,61 @@ type GameStatus =  CrashOrPass<SetError<
   // "13", "23", "33", "12", "22", "11", "32", "31", "21"
   ]
 >>>
-// ################################
-// ###### GAME YET TO START #######
-// ################################
-// @ts-expect-error
-type C5 = GameYetToStart<GameStatus>
-
-// ################################
-// ######  GAME IS ONGOING  #######
-// ################################
-// @ts-expect-error
-type C0 = GameIsOngoing<GameStatus>
-
-// ################################
-// ######    GAME A DRAW    #######
-// ################################
-//@ts-expect-error
-type C1 = TheGameIsADraw<GameStatus>
-
-// ################################
-// ####  GAME A WIN FOR CROSS  ####
-// ################################
-//@ts-expect-error
-type C2 = CrossHasWon<GameStatus>
-
-// ################################
-// ####  GAME A WIN FOR CIRCLE ####
-// ################################
-//@ts-expect-error
-type C3 = CircleHasWon<GameStatus>
 
 
-// ################################
-// ####       UI Helpers       ####
-// ################################
-type TheGameIsADraw<T extends Draw<any>> = T
-type CrossHasWon<T extends Winner<Cross, any, any>>= T
-type CircleHasWon<T extends Winner<Circle, any, any>> = T
-type GameIsOngoing<T extends Round<any, any, Round<any,any,any>>> = T
-type GameYetToStart<T extends InitialRound> = T
+/**********@ts-expect-error*******/
+//   ##############################
+type _______GAME_YET_TO_START______ = GameYetToStart<GameStatus>
+//   ##############################
 
-type GameLoop<A extends Array<Coordinates>, 
-              R extends Round<any,any,any> = InitialRound, 
-              P extends Player = Cross> = 
- A extends [infer Head, ...infer Tail] ?
-   Tail extends Array<Coordinates> ?
-   Head extends AvailableSquares<R["board"]> ?
-     Move<R,P,Head> extends Round<any,any,any> ?
-       GameLoop<Tail, Move<R,P,Head>, GetNextPlayer<P>> : 
-       Tail extends [] ? Move<R,P,Head> 
-         : `${ERROR_ID} No more moves allowed, game is over`
-         : `${ERROR_ID} Square '${Head extends string ? Head : never}' already taken` 
-         : `${ERROR_ID} Tail of Coordinate array is malformatted`
-         : R
+/**********@ts-expect-error*******/
+//   ##############################
+type ________GAME_IS_ONGOING_______ = GameIsOngoing<GameStatus>
+//   ##############################
 
-type ERROR_ID = "__ERROR__:"
+/**********@ts-expect-error*******/
+//   ##############################
+type ________GAME_IS_A_DRAW________ = TheGameIsADraw<GameStatus>
+//   ##############################
 
-type SetError<T> = [T, T extends `${ERROR_ID}${string}` ? "error" : "noError"]
-type CrashOrPass<T extends [unknown, "noError"]> = T[0];
+/**********@ts-expect-error*******/
+//   ##############################
+type ________CROSS_HAS_WON_________ = CrossHasWon<GameStatus>
+//   ##############################
 
-// ########################
-// ####  Requirements  ####
-// ########################
+/**********@ts-expect-error*******/
+//   ##############################
+type _______CIRCLE_HAS_WON_________ = CircleHasWon<GameStatus>
+//   ##############################
+
+// ##################################
+// ##################################
+// #--------------------------------#
+// #           Typelevel            #
+// #          Tic-Tac-Toe           #
+// #--------------------------------#
+// #              UI                #
+// #           ENDS HERE            #
+// #--------------------------------#
+// #                                #
+// #        THE UI CODE IS AT       #
+// #       THE END OF THE FILE      #
+// #                                #
+// #--------------------------------#
+// ##################################
+// ##################################
+
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+// #############################
+// #############################
+// ####                     ####
+// ####     Requirements    ####
+// ####                     ####
+// #############################
+// #############################
 // 
 // Design an API for a Tic-Tac-Toe board, consisting of types
 // representing states of the board, along with functions 
@@ -125,20 +128,73 @@ type CrashOrPass<T extends [unknown, "noError"]> = T[0];
 // * Calling WhoWonOrDraw on a tic-tac-toe board but the game has not finished is a compile time error
 // * IsPositionOccupied works for in-play and completed games.
 
-// #################
-// ####  Utils  ####
-// #################
+// ################################
+// ################################
+// ####          CODE          ####
+// ####         STARTS         ####
+// ####          HERE          ####
+// ################################
+// ################################
+
+// #############################
+// #############################
+// ####                     ####
+// ####        UTILS        ####
+// ####                     ####
+// #############################
+// #############################
 //
+// TIP: Consider skipping this section and going back to reading the code
+// when you run into one of the functions mention here
+
 // CartesianProduct<X,Y>
 // Example: 
-// CartesianProduct<"a" | "b", "c" | "d"> = ["a,c", "a,d", "b,c", "b,d"]
-type CartesianProductString<T extends ToStringableTypes,T2 extends ToStringableTypes > = `${T}${T2}`;
+// CartesianProduct<"a" | "b", "c" | "d"> = "ac" | "ad" | "bc" | "bd"
+type CartesianProductString<T1 extends ToStringableTypes,T2 extends ToStringableTypes > = `${T1}${T2}`;
 type ToStringableTypes = string | number | boolean | bigint;
+
+// -----------
+// Explanation
+// -----------
+// [The Algebra of algebraic data types](https://gist.github.com/gregberns/5e9da0c95a9a8d2b6338afe69310b945)
+// Is a great resource if you want to learn more about this
+//
+// `${T1}${T2}`
+// T1 and T2 can both be a union of different types.
+// Say
+// `${ a | b | c }${ d | e | f }` 
+// We have three choices for the first part, and three choices for the second part.
+// we need a member of each, so we have 3 * 3 = 9 choices to create our string
+// cartesian product of a | b | c and d | e | f  is 9 strings
+// "ad"| "ae" | "af" | "bd" | "be" | "bf" | "cd" | "ce" | "cf"
+
+// After reading the algebra of algebraic data types, you can see that
+
+//  1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 = 9
+//  "ad"| "ae" | "af" | "bd" | "be" | "bf" | "cd" | "ce" | "cf"
+
+//  (1 * (1 + 1 + 1)) + (1 * (1 + 1 + 1)) + (1 * (1 + 1 + 1)) = 9
+//  ["a", "d"| "e" | "f"] | ["b", "d" | "e" | "f"] | ["c", "d" | "e" | "f"]
+
+//  (1 + 1 + 1) * (1 + 1 + 1) = 9
+//  ["a" | "b" | "c", "d" | "e" | "f"]
+
+//  (3) * (3) = 9
+
 
 // UnionToIntersection<X>
 // Takes a union like `A | B | C` and returns an intersection like `A & B & C`
 type UnionToIntersection<U> = 
   (U extends any ? (k: U)=>void : never) extends ((k: infer I)=>void) ? I : never
+// -----------
+// Explanation
+// -----------
+// This one is in worthy of explanation
+// Sources:
+// https://stackoverflow.com/questions/50374908/transform-union-type-to-intersection-type/50375286#50375286
+// https://github.com/microsoft/TypeScript/issues/29594#issuecomment-507673155
+
+
 
 // Example: ToUnion<[1,2,3]> = 1 | 2 | 3
 type ToUnion<T extends any[]> = T[number]
@@ -171,13 +227,14 @@ type MinusOne<N extends number, Arr extends any[] = []> = [
   : MinusOne<N, [...Arr, unknown]>
 
 // PlusOne<N>
-// Defined between 1 and 1000
-// Same idea as above but when we hit our base case
-// Add two extra elements to the array and return the length of the array.
+// Defined between 0 and 999
+// Start with an array of length 0 and check if it is equal to N
+// If it is add one element to the array and return it's length.
+// If not recursively call PlusOne with an array that is one element longer.
 // This way we get N + 1
 type PlusOne<N extends number, Arr extends any[] = []> = 
-  [...Arr, unknown]['length'] extends N
-    ? [...Arr, unknown, unknown]['length']
+  [...Arr]['length'] extends N
+    ? [...Arr, unknown]['length']
     : PlusOne<N, [...Arr, unknown]>
 
 // FromToInc<Lower,Higher>
@@ -191,8 +248,11 @@ type FromToInc<From extends number, To extends number, acc extends any[] = []> =
 type FromToDec<From extends number, To extends number, acc extends any[] = []> = From extends MinusOne<To> ? acc : FromToDec<MinusOne<From>, To, [...acc, From]>;
 
 
+
+// #####################
 // #####################
 // ####  Data Types ####
+// #####################
 // #####################
 
 interface Circle { __type: "O";     }
@@ -318,6 +378,15 @@ type GetWinner<B extends Board> =
    UniqueInSequence<LookupCoordinates<WinningPositions,B>>
 
 
+// ###################################
+// ####        Game States        ####
+// ###################################
+// The game can be in one of three states:
+// 1. Round in progress
+// 2. Won
+// 3. Draw
+
+type GameStates = Round<any, any, any> | Draw<any, any> | Winner<any, any, any>
 
 // ###################################
 // ####           Round           ####
@@ -350,13 +419,6 @@ interface HasPrevious<R> {
 type InitialBoard = { [key in keyof Board]: Empty };
 type InitialRound = Round<InitialBoard, Cross, Nil>;
 
-// ###################################
-// ####        Game States        ####
-// ###################################
-// The game can be in one of three states:
-// 1. Round in progress
-// 2. Won
-// 3. Draw
 
 interface Winner<
   P extends Player,
@@ -368,7 +430,14 @@ interface Winner<
   winner: P;
 }
 
-interface Draw<R extends Round<any, any, any>> extends HasPrevious<R> {__tag: "draw";}
+interface Draw<R extends Round<any, any, any>, B extends Board> extends HasPrevious<R> {__tag: "draw";}
+
+type GetBoard<R extends GameStates>
+                  = 
+                  R extends Draw<any, infer B> ? B
+                  : R extends Round<infer B, any, any>              ? B
+                  : R extends Winner<any, any, infer B>             ? B
+                  : never;
 
 // ###################################
 // ####        Game Actions       ####
@@ -391,17 +460,15 @@ type Move<
   CurrentRound extends Round<Board, P, any>,
   P extends Player,
   Position extends AvailableSquares<CurrentRound["board"]>,
-  _NextBoard extends Board = SetSquare<CurrentRound["board"], Position, P>
+  _NextBoard extends Board = SetSquare<CurrentRound["board"], Position, P>,
+  _NextRound extends Round<any,any,any> = Round<_NextBoard, GetNextPlayer<P>, CurrentRound>
 > = 
-HasWon<P,Round<_NextBoard, GetNextPlayer<P>, CurrentRound>> extends true 
+HasWon<P,_NextRound> extends true 
   ? Winner<P, CurrentRound, _NextBoard>
   : NoMoreSquares<_NextBoard> extends true
-    ? Draw<CurrentRound>
-    : Round<
-        _NextBoard,
-        GetNextPlayer<P>,
-        CurrentRound
-      >;
+    ? Draw<CurrentRound, _NextBoard>
+    : _NextRound
+    
 
 // ###########################################
 // ####        Game State Functions       ####
@@ -436,7 +503,7 @@ type HasWon<
 // ####             Requirements          ####
 // ###########################################
 type DrawString = "The game was a draw";
-type WhoWonOrDraw<A extends Draw<any> | Winner<Player, any, any>> = (
+type WhoWonOrDraw<A extends Draw<any,any> | Winner<Player, any, any>> = (
   state: A
 ) => A extends Winner<infer P, any, any>
   ? PlayerWinnerString<P>
@@ -461,13 +528,10 @@ type TakeMoveBack<B extends HasPrevious<Round<any, any, any>>> = B["previous"];
 // just return true if the game is Draw.
 type IsPositionOccupied<
   RW extends Winner<any, any, any> | Round<any, any, any>,
-  Coord extends Coordinates
+  Coord extends Coordinates,
+  B extends Board = GetBoard<RW>
 > = (
-  RW extends Winner<any, any, any>
-    ? RW["winningPosition"][Coord]
-    : RW extends Round<any, any, any>
-    ? RW["board"][Coord]
-    : never
+  B[Coord] 
 ) extends Empty
   ? false
   : true;
@@ -603,7 +667,7 @@ type DrawStep6 = Move<DrawStep5, Circle, "11">;
 type DrawStep7 = Move<DrawStep6, Cross, "32">;
 type DrawStep8 = Move<DrawStep7, Circle, "31">;
 type DrawFinal = Move<DrawStep8, Cross, "21">;
-type DrawOutcome = Expect<Draw<any> extends DrawFinal ? true : false>;
+type DrawOutcome = Expect<Draw<any,any> extends DrawFinal ? true : false>;
 
 // ##################################
 // #              TEST              #
@@ -633,6 +697,88 @@ type WinCircleFinal = Move<WinCircleStep5, Circle, "31">;
 type WinCircleOutcome = Expect<Equal<
    WinCircleFinal["winner"], Circle
 >>;
+
+
+// ################################
+// ################################
+// ####        UI CODE         ####
+// ################################
+// ################################
+
+// ################################
+// ####       UI Helpers       ####
+// ################################
+
+// 'd' is just to hide the variable as much as possible in the UI
+type d = ShowBoard<GetBoard<GameStatus>>
+
+// These are functions give type errors when game is not in their state
+// Then we combine that with @ts-expect-error to flip that behavior
+type TheGameIsADraw<T extends Draw<any, any>> = T
+type CrossHasWon<T extends Winner<Cross, any, any>>= T
+type CircleHasWon<T extends Winner<Circle, any, any>> = T
+type GameIsOngoing<T extends Round<any, any, Round<any,any,any>>> = T
+type GameYetToStart<T extends InitialRound> = T
+
+// ################################
+// ####       GAME LOOP        ####
+// ################################
+
+type GameLoop<A extends Array<Coordinates>, 
+              R extends Round<any,any,any> = InitialRound, 
+              P extends Player = Cross> = 
+ A extends [infer Head, ...infer Tail] ?
+   Tail extends Array<Coordinates> ?
+   Head extends AvailableSquares<R["board"]> ?
+     Move<R,P,Head> extends Round<any,any,any> ?
+       GameLoop<Tail, Move<R,P,Head>, GetNextPlayer<P>> : 
+       Tail extends [] ? Move<R,P,Head> 
+         : `${ERROR_ID} No more moves allowed, game is over`
+         : `${ERROR_ID} Square '${Head extends string ? Head : never}' already taken` 
+         : `${ERROR_ID} Tail of Coordinate array is malformatted`
+         : R
+
+type ERROR_ID = "__ERROR__:"
+type SetError<T> = [T, T extends `${ERROR_ID}${string}` ? "error" : "noError"]
+type CrashOrPass<T extends [unknown, "noError"]> = T[0];
+
+
+// ################################
+// ####         DISPLAY        ####
+// ################################
+
+// Some shorter and nicer looking symbols for the Display
+interface X {}
+interface O {}
+interface _ {}
+
+type ShowSquare<S extends Square> = S extends Cross  ? X
+                                  : S extends Circle ? O
+                                  : S extends Empty  ? _
+                                  : never;
+
+type RowArray = FromToInc<1,Size>
+type ColArray = FromToInc<1,Size>
+
+type Repeat<T, N extends number, arr extends Array<T> = []> = N extends 0 ? arr : Repeat<T, MinusOne<N>, [T, ...arr]>;
+
+type TupleCoordinateLookup<T extends [number, number], B extends UIBoard> = 
+   `${T[0]}${T[1]}` extends keyof B ? B[`${T[0]}${T[1]}`] : never;
+
+type TupleCoordinateLookups<T extends [number, number][], B extends UIBoard> = 
+  {[Key in keyof T]: TupleCoordinateLookup<T[Key], B>};
+
+type KeyToValue<T extends Array<unknown>, K extends keyof T> = K extends `${number}` ? T[K] : never;
+
+type ShowUIBoard<B extends UIBoard > = 
+  {[key in keyof RowArray as KeyToValue<RowArray,key>]: RowArray[key] extends number 
+    ? TupleCoordinateLookups<Zip<Repeat<RowArray[key], Size>, ColArray>, B> : never} 
+
+type ToUIBoard<B extends Board> = {[s in Coordinates]: ShowSquare<B[s]>};
+type UIBoard = {[s in Coordinates]: unknown}
+
+type ShowBoard<B extends Board> = ShowUIBoard<ToUIBoard<B>>;
+
 
 // ##################################
 // ##################################
