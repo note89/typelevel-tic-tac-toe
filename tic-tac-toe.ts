@@ -335,7 +335,14 @@ type _PutUnionMembersIntoFunctionArgumentPosition<U> = U extends any ? (k: U)=>v
 //
 
 // Example: ToUnion<[1,2,3]> = 1 | 2 | 3
-type ToUnion<T extends any[]> = T[number]
+//
+// Explanation:
+// Array has a index signature of `number`
+// type Array<T> = { [index: number]: T ....}
+// so by indexing with 'number' we get back T.
+// https://www.typescriptlang.org/docs/handbook/2/objects.html#index-signatures
+type ToUnion<T extends Array<any>> = T[number]
+
 
 // Zip two arrays together
 // Example: Zip<[1,2,3],["a","b","c"]> = [[1,"a"],[2,"b"],[3,"c"]]
