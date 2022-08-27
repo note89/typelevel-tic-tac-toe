@@ -35,9 +35,8 @@ type ____________DISPLAY___________ = d
 
 type GameStatus =  CrashOrPass<SetError<
   GameLoop<[
-
   //  Ongoing game
-  // "11", "22", "33",
+  // "13","23","33"
 
   //  Play a taken position
   //  "11", "11"
@@ -316,7 +315,7 @@ type _PutUnionMembersIntoFunctionArgumentPosition<U> = U extends any ? (k: U)=>v
 //          or (k: "c") => void
 // It's not the argument to the function that can be "a" | "b" | "c".
 // There are three separate functions with those argument, and we DON'T know which one we will have.
-// Therefore ghe only SAFE argument to ((k: infer I) => void) the intersection of all possible arguments.
+// Therefore the only SAFE argument to ((k: infer I) => void) the intersection of all possible arguments.
 // 
 // That might had been a bit confusing, so let's look at one example
 //
@@ -336,7 +335,7 @@ type _PutUnionMembersIntoFunctionArgumentPosition<U> = U extends any ? (k: U)=>v
 
 // Example: ToUnion<[1,2,3]> = 1 | 2 | 3
 //
-// Explanation:
+// Explanation: ToUnion<T>
 // Array has a index signature of `number`
 // type Array<T> = { [index: number]: T ....}
 // so by indexing with 'number' we get back T.
@@ -344,6 +343,7 @@ type _PutUnionMembersIntoFunctionArgumentPosition<U> = U extends any ? (k: U)=>v
 type ToUnion<T extends Array<any>> = T[number]
 
 
+// Zip<A,B>
 // Zip two arrays together
 // Example: Zip<[1,2,3],["a","b","c"]> = [[1,"a"],[2,"b"],[3,"c"]]
 type Zip<T extends any[], U extends any[], Acc extends any[] = []> = 
@@ -352,8 +352,14 @@ type Zip<T extends any[], U extends any[], Acc extends any[] = []> =
   Zip<Tail, Tail2, [...Acc, [Head, Head2]]> : Acc  : Acc;
 
 
+// StringConcatTuples<T>
 // Join tuples together to strings
 // Example: StringConcatTuples<[[1,2],[3,4]]> = ["12","34"]
+//
+// Explanation: StringConcatTuples<T>
+// Here we are using a Mapped Types.
+// https://www.typescriptlang.org/docs/handbook/2/mapped-types.html
+// It' allows you to loop over the keys of a type.
 type StringConcatTuples<T extends [number, number][]> = {[Key in keyof T]: `${T[Key][0]}${T[Key][1]}`};
 
 // ####  Math Utils  ####
@@ -855,7 +861,7 @@ type WinCircleOutcome = Expect<Equal<
 // ################################
 
 // 'd' is just to hide the variable as much as possible in the UI
-type d = ShowBoard<GetBoard<GameStatus>>
+type d = PrintGameDisplay<GameStatus>
 
 // These are functions give type errors when game is not in their state
 // Then we combine that with @ts-expect-error to flip that behavior
@@ -869,6 +875,8 @@ type GameYetToStart<T extends InitialRound> = T
 // ####       GAME LOOP        ####
 // ################################
 
+// TODO, allow number input
+// Give error is coordinate is not valid
 type GameLoop<A extends Array<Coordinates>, 
               R extends Round<any,any,any> = InitialRound, 
               P extends Player = Cross> = 
@@ -886,45 +894,74 @@ type GameLoop<A extends Array<Coordinates>,
 type ERROR_ID = "__ERROR__:"
 type SetError<T> = [T, T extends `${ERROR_ID}${string}` ? "error" : "noError"]
 type CrashOrPass<T extends [unknown, "noError"]> = T[0];
+type ToNumber<T extends `${number}`> = T extends `${infer N}` ? N : never;
+type A = ToNumber<Coordinates>
 
 
 // ################################
 // ####         DISPLAY        ####
 // ################################
+//
+// We want to produce a UI like 
+// {
+//   3: [X,X,O],
+//   2: [X,_,O],
+//   1: [_,_,O],
+// }
+//
+// To show the state of the game when hovering the type
+//
+
+type PrintGameDisplay<T extends GameStates> = ShowBoard<GetBoard<T>>
 
 // Some shorter and nicer looking symbols for the Display
 interface X {}
 interface O {}
 interface _ {}
 
-type ShowSquare<S extends Square> = S extends Cross  ? X
-                                  : S extends Circle ? O
-                                  : S extends Empty  ? _
-                                  : never;
+// UIBoard
+// Coordinates to something that we want to Display
+type UIBoard = {[s in Coordinates]: unknown}
 
-type RowArray = FromToInc<1,Size>
-type ColArray = FromToInc<1,Size>
+/// #### DISPLAY HELPERS ####
 
-type Repeat<T, N extends number, arr extends Array<T> = []> = N extends 0 ? arr : Repeat<T, MinusOne<N>, [T, ...arr]>;
+type ShowBoard<B extends Board> = ShowUIBoard<ToUIBoard<B>>;
 
-type TupleCoordinateLookup<T extends [number, number], B extends UIBoard> = 
-   `${T[0]}${T[1]}` extends keyof B ? B[`${T[0]}${T[1]}`] : never;
+// ToUIBoard
+// The particular board we want to show
+// Structurally, a UIBoard
+type ToUIBoard<B extends Board> = {[s in Coordinates]: ChangeSquare<B[s]>};
+
+type ChangeSquare<S extends Square> = S extends Cross  ? X
+                                    : S extends Circle ? O
+                                    : S extends Empty  ? _
+                                    : never;
+
+// We want our coordinate system to have 1,1 bottom left
+// and Size,Size top right
+type RowsBackwards  = FromToDec<Size,1>
+type ColumnsForward = FromToInc<1,Size>
+
+// ShowUIBoard
+type ShowUIBoard<B extends UIBoard > = 
+  {[key in keyof RowsBackwards as KeyToValue<RowsBackwards,key>]: RowsBackwards[key] extends number 
+    ? TupleCoordinateLookups<Zip<ColumnsForward,Repeat<RowsBackwards[key], Size>>, B> : never} 
+
+type KeyToValue<T extends Array<unknown>, K extends keyof T> = 
+    K extends `${number}` ? T[K] : never;
+
+type Repeat<T, N extends number, arr extends Array<T> = []> = 
+    N extends 0 ? arr : Repeat<T, MinusOne<N>, [T, ...arr]>;
 
 type TupleCoordinateLookups<T extends [number, number][], B extends UIBoard> = 
   {[Key in keyof T]: TupleCoordinateLookup<T[Key], B>};
 
-type KeyToValue<T extends Array<unknown>, K extends keyof T> = K extends `${number}` ? T[K] : never;
-
-type ShowUIBoard<B extends UIBoard > = 
-  {[key in keyof RowArray as KeyToValue<RowArray,key>]: RowArray[key] extends number 
-    ? TupleCoordinateLookups<Zip<Repeat<RowArray[key], Size>, ColArray>, B> : never} 
-
-type ToUIBoard<B extends Board> = {[s in Coordinates]: ShowSquare<B[s]>};
-type UIBoard = {[s in Coordinates]: unknown}
-
-type ShowBoard<B extends Board> = ShowUIBoard<ToUIBoard<B>>;
+type TupleCoordinateLookup<T extends [number, number], B extends UIBoard> = 
+  `${T[0]}${T[1]}` extends keyof B ? B[`${T[0]}${T[1]}`] : never;
 
 
+
+type Test123123 = d
 // ##################################
 // ##################################
 // ##################################
