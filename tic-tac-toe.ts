@@ -392,15 +392,16 @@ type PlusOne<N extends number, Arr extends any[] = []> =
     : PlusOne<N, [...Arr, unknown]>
 
 // FromToInc<Lower,Higher>
+// Defined between 0 and 999
 // Gives back an Array of all numbers between Lower and Higher (inclusive)
 // Example: FromToInc<1,3> = [1,2,3]
 type FromToInc<From extends number, To extends number, acc extends any[] = []> = From extends PlusOne<To> ? acc : FromToInc<PlusOne<From>, To, [...acc, From]>;
 
 // FromToDec<Higher,Lower>
+// Defined between 999 and 0
 // Gives back an Array of all numbers between Higher and Lower (inclusive)
 // Example: FromToDec<3,1> = [3,2,1]
 type FromToDec<From extends number, To extends number, acc extends any[] = []> = From extends MinusOne<To> ? acc : FromToDec<MinusOne<From>, To, [...acc, From]>;
-
 
 
 // #####################
