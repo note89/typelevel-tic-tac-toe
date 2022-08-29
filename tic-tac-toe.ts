@@ -1,7 +1,9 @@
 //
 // To play along
 // here is a Typescript playground of the code.
-// https://tinyurl.com/typelevel-tic-tac-toe
+// https://tiny.one/typelevel-tic-tac-toe
+//
+// Code tested with Typescript version v4.7.4
 //
 // ##################################
 // ##################################
@@ -17,9 +19,9 @@
 // ##################################
 // 
 // This is my attempt of a decent UX (hehe).
-// 0. Select game board size (3x3, 4x4, 5x5, etc) 
+// 0. Select game board size (3 => 3x3, 4 => 4x4, etc) 
 // 1. Cross will be the first to move
-// 2. Just enter coordinates.
+// 2. Just enter coordinates as number (13 => Coordinate(x=1, y=3))
 // 
 // The status checks below will turn RED 
 // To show what state the game is in.
@@ -27,16 +29,28 @@
 // Illegal moves will be compile-time errors
 // with decent error messages.
 //
+// Hover ___DISPLAY__ for a visual representation
+// of the current state of the game.
 type GameSize = 3;
 
 //   ##############################
 type ____________DISPLAY___________ = d
 //   ##############################
 
+
 type GameStatus =  CrashOrPass<SetError<
   GameLoop<[
   //  Ongoing game
   // 13,23,33
+
+  // Draw 
+  // 13, 23, 33, 12, 22, 11, 32, 31, 21
+
+  //  Cross Win
+  //  11, 32, 22, 12, 33 
+
+  //  Circle Win
+  //  13, 11, 23, 22, 12, 33
 
   //  Play a taken position
   //  11, 11
@@ -50,14 +64,6 @@ type GameStatus =  CrashOrPass<SetError<
   //  Play moves after game is won
   //  11, 32, 22, 12, 33 13
 
-  //  Cross Win
-  //  11, 32, 22, 12, 33 
-
-  //  Circle Win
-  //  13, 11, 23, 22, 12, 33
-
-  // Draw 
-  // 13, 23, 33, 12, 22, 11, 32, 31, 21
   ]
 >>>
 
@@ -362,7 +368,8 @@ type Zip<T extends any[], U extends any[], Acc extends any[] = []> =
 // Explanation: StringConcatTuples<T>
 // Here we are using a Mapped Types.
 // https://www.typescriptlang.org/docs/handbook/2/mapped-types.html
-// It' allows you to loop over the keys of a type.
+// It' allows you to loop over the members in a type
+// keyof gives us a type with a union of all the keys in T.
 type StringConcatTuples<T extends [number, number][]> = {[Key in keyof T]: `${T[Key][0]}${T[Key][1]}`};
 
 // ####  Math Utils  ####
@@ -441,7 +448,6 @@ type Size = GameSize;
 type Column      = ToUnion<FromToInc<1,Size>>;
 type Row         = ToUnion<FromToInc<1,Size>>;
 type Coordinates = CartesianProductString<Column, Row>
-
 
 // ###################################
 // ####     Winning Positions     ####
@@ -567,14 +573,6 @@ interface HasPrevious<R> {
   previous: R;
 }
 
-// ###################################
-// ####   Initial board & round   ####
-// ###################################
-//
-type InitialBoard = { [key in keyof Board]: Empty };
-type InitialRound = Round<InitialBoard, Cross, Nil>;
-
-
 interface Winner<
   P extends Player,
   PrevR extends Round<any, any, any>,
@@ -587,12 +585,23 @@ interface Winner<
 
 interface Draw<R extends Round<any, any, any>, B extends Board> extends HasPrevious<R> {__tag: "draw";}
 
+// ###################################
+// ####     Games state helper    ####
+// ###################################
+
 type GetBoard<R extends GameStates>
                   = 
-                  R extends Draw<any, infer B> ? B
-                  : R extends Round<infer B, any, any>              ? B
-                  : R extends Winner<any, any, infer B>             ? B
+                    R extends Draw<any, infer B>         ? B
+                  : R extends Round<infer B, any, any>   ? B
+                  : R extends Winner<any, any, infer B>  ? B
                   : never;
+
+// ###################################
+// ####   Initial board & round   ####
+// ###################################
+//
+type InitialBoard = { [key in keyof Board]: Empty };
+type InitialRound = Round<InitialBoard, Cross, Nil>;
 
 // ###################################
 // ####        Game Actions       ####
@@ -657,30 +666,21 @@ type HasWon<
 // ####        Extra Functions from       ####
 // ####             Requirements          ####
 // ###########################################
-type DrawString = "The game was a draw";
 type WhoWonOrDraw<A extends Draw<any,any> | Winner<Player, any, any>> = (
   state: A
 ) => A extends Winner<infer P, any, any>
   ? PlayerWinnerString<P>
   : DrawString;
+  type DrawString = "The game was a draw";
 
-// Util
-type CircleWonString = "Circle Won the game"
-type CrossWonString = "Cross Won the game"
 type PlayerWinnerString<P extends Player> = P extends Circle
   ? CircleWonString
   : CrossWonString
+  type CircleWonString = "Circle Won the game"
+  type CrossWonString = "Cross Won the game"
 
 type TakeMoveBack<B extends HasPrevious<Round<any, any, any>>> = B["previous"];
 
-//  
-// We check if there if the Square is Empty in the Position provided. 
-// Depending on the game state we look at different fields. 
-// We return a boolean to indicate if the square is occupied or not.
-// We don't allow the function to be called with Draw, because a Draw game
-// has by definition no squares to play on.
-// Which is a bit stronger then the official requirement, and we could 
-// just return true if the game is Draw.
 type IsPositionOccupied<
   RW extends Winner<any, any, any> | Round<any, any, any>,
   Coord extends Coordinates,
@@ -864,23 +864,20 @@ type WinCircleOutcome = Expect<Equal<
 // ####       UI Helpers       ####
 // ################################
 
-// 'd' is just to hide the variable as much as possible in the UI
+// 'd' is just to hide the variable as much as possible in the UI above
 type d = PrintGameDisplay<GameStatus>
 
 // These are functions give type errors when game is not in their state
 // Then we combine that with @ts-expect-error to flip that behavior
 type TheGameIsADraw<T extends Draw<any, any>> = T
-type CrossHasWon<T extends Winner<Cross, any, any>>= T
-type CircleHasWon<T extends Winner<Circle, any, any>> = T
-type GameIsOngoing<T extends Round<any, any, Round<any,any,any>>> = T
+type CrossHasWon   <T extends Winner<Cross, any, any>>= T
+type CircleHasWon  <T extends Winner<Circle, any, any>> = T
+type GameIsOngoing <T extends Round<any, any, Round<any,any,any>>> = T
 type GameYetToStart<T extends InitialRound> = T
 
 // ################################
 // ####       GAME LOOP        ####
 // ################################
-
-// TODO, allow number input
-// Give error is coordinate is not valid
 
 type GameLoop<A extends Array<number>, 
               R extends Round<any,any,any> = InitialRound, 
@@ -917,8 +914,7 @@ type NumToStr<N extends number> = `${N}`
 //   1: [_,_,O],
 // }
 //
-// To show the state of the game when hovering the type
-// The string represents a error message if the game is in an error state
+// Show the state of the game when hovering the instantiated type
 type PrintGameDisplay<T extends (GameStates | GAME_ERROR<string>)> = 
   T extends GameStates ? ShowBoard<GetBoard<T>> : T
 
@@ -955,18 +951,18 @@ type ShowUIBoard<B extends UIBoard > =
   {[key in keyof RowsBackwards as KeyToValue<RowsBackwards,key>]: RowsBackwards[key] extends number 
     ? TupleCoordinateLookups<Zip<ColumnsForward,Repeat<RowsBackwards[key], Size>>, B> : never} 
 
-type KeyToValue<T extends Array<unknown>, K extends keyof T> = 
-    K extends `${number}` ? T[K] : never;
+  type KeyToValue<T extends Array<unknown>, K extends keyof T> = 
+      K extends `${number}` ? T[K] : never;
 
-type Repeat<T, N extends number, arr extends Array<T> = []> = 
-    N extends 0 ? arr : Repeat<T, MinusOne<N>, [T, ...arr]>;
+  type Repeat<T, N extends number, arr extends Array<T> = []> = 
+      N extends 0 ? arr : Repeat<T, MinusOne<N>, [T, ...arr]>;
 
-type TupleCoordinateLookups<T extends [number, number][], B extends UIBoard> = 
-  {[Key in keyof T]: TupleCoordinateLookup<T[Key], B>};
+  type TupleCoordinateLookups<T extends [number, number][], B extends UIBoard> = 
+    {[Key in keyof T]: TupleCoordinateLookup<T[Key], B>};
 
-type TupleCoordinateLookup<T extends [number, number], B extends UIBoard> = 
-  `${T[0]}${T[1]}` extends keyof B ? B[`${T[0]}${T[1]}`] : never;
-
+  type TupleCoordinateLookup<T extends [number, number], B extends UIBoard> = 
+    `${T[0]}${T[1]}` extends keyof B ? B[`${T[0]}${T[1]}`] : never;
+// ShowUIBoard End
 
 // ##################################
 // ##################################
