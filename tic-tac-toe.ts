@@ -417,13 +417,13 @@ type FromToDec<From extends number, To extends number, acc extends any[] = []> =
 // #####################
 // #####################
 
-interface Circle { __type: "O";     }
-interface Cross  { __type: "X";     }
-interface Empty  { __type: "Empty"; }
-interface Nil    { __type: "Nil";   }
-
 type Player = Cross | Circle;
+  interface Circle { __type: "O";     }
+  interface Cross  { __type: "X";     }
+
 type Square = Player | Empty;
+  interface Empty  { __type: "Empty"; }
+
 
 
 // ##############################################
@@ -520,24 +520,6 @@ type WinningPositions =
 //
 type Board = { [s in Coordinates]: Square };
 
-// ###################################
-// ####        Get Winner         ####
-// ###################################
-// 
-// LookupPosition returns the state of the squares at each position listed
-// ["11", "12", "13"] -> [Circle, Circle, Circle]
-type LookupCoordinates<Coords extends Array<Coordinates>, B extends Board> =
-  { [Key in keyof Coords ]: B[Coords[Key]] }
-
-// If there is any Array that contains only the same element
-// then that element will be returned
-type UniqueInSequence<P extends Array<unknown>> =
-  P extends Array<unknown> ? UnionToIntersection<P[number]> : never
-
-// If there is a winner in the Squares provided then the winner is returned.
-type GetWinner<B extends Board> =
-   UniqueInSequence<LookupCoordinates<WinningPositions,B>>
-
 
 // ###################################
 // ####        Game States        ####
@@ -564,6 +546,7 @@ interface Round<
   board: B;
   nextToMove: P;
 }
+interface Nil    { __type: "Nil";   }
 
 // We separate our HasPrevious interface from the Round interface
 // To be able to use it in other interfaces.
@@ -661,6 +644,21 @@ type HasWon<
   B extends Round<any, any, any>
 > = P extends GetWinner<B["board"]> ? true : false;
 
+// If there is a winner in the Squares provided then the winner is returned.
+type GetWinner<B extends Board> =
+   UniqueInSequence<LookupCoordinates<WinningPositions,B>>
+
+// LookupPosition returns the state of the squares at each position listed
+// ["11", "12", "13"] -> [Circle, Circle, Circle]
+type LookupCoordinates<Coords extends Array<Coordinates>, B extends Board> =
+  { [Key in keyof Coords ]: B[Coords[Key]] }
+
+// If there is any Array that contains only the same element
+// then that element will be returned
+type UniqueInSequence<P extends Array<unknown>> =
+  P extends Array<unknown> ? UnionToIntersection<P[number]> : never
+
+
 
 // ###########################################
 // ####        Extra Functions from       ####
@@ -679,7 +677,7 @@ type PlayerWinnerString<P extends Player> = P extends Circle
   type CircleWonString = "Circle Won the game"
   type CrossWonString = "Cross Won the game"
 
-type TakeMoveBack<B extends HasPrevious<Round<any, any, any>>> = B["previous"];
+type TakeMoveBack<R extends HasPrevious<Round<any, any, any>>> = R["previous"];
 
 type IsPositionOccupied<
   RW extends Winner<any, any, any> | Round<any, any, any>,
@@ -690,7 +688,6 @@ type IsPositionOccupied<
 ) extends Empty
   ? false
   : true;
-
 
 
 // ###################################
