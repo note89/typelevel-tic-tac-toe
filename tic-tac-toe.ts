@@ -36,25 +36,28 @@ type ____________DISPLAY___________ = d
 type GameStatus =  CrashOrPass<SetError<
   GameLoop<[
   //  Ongoing game
-  // "13","23","33"
+  // 13,23,33
 
   //  Play a taken position
-  //  "11", "11"
+  //  11, 11
 
   //  Malformed move
-  //  "11", "Hello"
+  //  11, "Hello"
+
+  // Illegal move
+  //  55
 
   //  Play moves after game is won
-  //  "11", "32", "22", "12", "33" "13"
+  //  11, 32, 22, 12, 33 13
 
   //  Cross Win
-  //  "11", "32", "22", "12", "33" 
+  //  11, 32, 22, 12, 33 
 
   //  Circle Win
-  //  "13", "11", "23", "22", "12", "33"
+  //  13, 11, 23, 22, 12, 33
 
   // Draw 
-  // "13", "23", "33", "12", "22", "11", "32", "31", "21"
+  // 13, 23, 33, 12, 22, 11, 32, 31, 21
   ]
 >>>
 
@@ -877,26 +880,30 @@ type GameYetToStart<T extends InitialRound> = T
 
 // TODO, allow number input
 // Give error is coordinate is not valid
-type GameLoop<A extends Array<Coordinates>, 
+
+type GameLoop<A extends Array<number>, 
               R extends Round<any,any,any> = InitialRound, 
               P extends Player = Cross> = 
- A extends [infer Head, ...infer Tail] ?
-   Tail extends Array<Coordinates> ?
-   Head extends AvailableSquares<R["board"]> ?
-     Move<R,P,Head> extends Round<any,any,any> ?
-       GameLoop<Tail, Move<R,P,Head>, GetNextPlayer<P>> : 
-       Tail extends [] ? Move<R,P,Head> 
-         : `${ERROR_ID} No more moves allowed, game is over`
-         : `${ERROR_ID} Square '${Head extends string ? Head : never}' already taken` 
-         : `${ERROR_ID} Tail of Coordinate array is malformatted`
-         : R
+  A extends [infer Head, ...infer Tail] ?
+    Head extends number ?
+      Tail extends Array<number> ?
+        NumToStr<Head> extends Coordinates ?
+          NumToStr<Head> extends AvailableSquares<R["board"]> ?
+            Move<R,P,NumToStr<Head> > extends Round<any,any,any> ?
+              GameLoop<Tail, Move<R,P,NumToStr<Head> >, GetNextPlayer<P>> : 
+              Tail extends [] ? 
+                Move<R,P,NumToStr<Head> > 
+                : GAME_ERROR<`No more moves allowed, game is over`>
+          : GAME_ERROR<`Square '${Head}' already taken`>
+        : GAME_ERROR<`Coordinate '${Head}' is illegal`> 
+      : GAME_ERROR<`Tail of Coordinate array is malformatted`>
+    : GAME_ERROR<`Coordinate '${Head extends ToStringableTypes ? Head : never}' is not a number`>
+  : R
 
-type ERROR_ID = "__ERROR__:"
-type SetError<T> = [T, T extends `${ERROR_ID}${string}` ? "error" : "noError"]
+type GAME_ERROR<T extends string> = `__ERROR__: ${T}`
+type SetError<T> = [T, T extends GAME_ERROR<string> ? "error" : "noError"]
 type CrashOrPass<T extends [unknown, "noError"]> = T[0];
-type ToNumber<T extends `${number}`> = T extends `${infer N}` ? N : never;
-type A = ToNumber<Coordinates>
-
+type NumToStr<N extends number> = `${N}`
 
 // ################################
 // ####         DISPLAY        ####
@@ -910,9 +917,9 @@ type A = ToNumber<Coordinates>
 // }
 //
 // To show the state of the game when hovering the type
-//
-
-type PrintGameDisplay<T extends GameStates> = ShowBoard<GetBoard<T>>
+// The string represents a error message if the game is in an error state
+type PrintGameDisplay<T extends (GameStates | GAME_ERROR<string>)> = 
+  T extends GameStates ? ShowBoard<GetBoard<T>> : T
 
 // Some shorter and nicer looking symbols for the Display
 interface X {}
@@ -960,8 +967,6 @@ type TupleCoordinateLookup<T extends [number, number], B extends UIBoard> =
   `${T[0]}${T[1]}` extends keyof B ? B[`${T[0]}${T[1]}`] : never;
 
 
-
-type Test123123 = d
 // ##################################
 // ##################################
 // ##################################
