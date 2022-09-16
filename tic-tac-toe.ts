@@ -31,6 +31,7 @@
 //
 // Hover ___DISPLAY__ for a visual representation
 // of the current state of the game.
+
 type GameSize = 3;
 
 //   ##############################
@@ -40,7 +41,7 @@ type ____________DISPLAY___________ = d
 
 type GameStatus =  CrashOrPass<SetError<
   GameLoop<[
-  //  Ongoing game
+  // Ongoing game
   // 13,23,33
 
   // Draw 
@@ -195,11 +196,13 @@ type ToStringableTypes = string | number | boolean | bigint;
 // UnionToIntersection<X>
 // Takes a union like `A | B | C` and returns an intersection like `A & B & C`
 type UnionToIntersection<U> = 
-     _PutUnionMembersIntoFunctionArgumentPosition<U> extends ((k: infer I)=>void) ? I : never
-
-type _PutUnionMembersIntoFunctionArgumentPosition<U> = U extends any ? (k: U)=>void  : never;
-// -----------
-// Explanation: UnionToIntersection<U> 
+    _PutUnionMembersIntoFunctionArgumentPosition<U> extends 
+        ((k: infer I)=>void) 
+            ? I 
+            : never
+// A | B | C => (k: A) => void | (k: B) => void | (k: C) => void
+type _PutUnionMembersIntoFunctionArgumentPosition<U> = 
+    U extends any ? (k: U)=>void  : never;
 // Creator: Jcalz 
 // https://github.com/microsoft/TypeScript/issues/29594#issuecomment-507673155
 // -----------
